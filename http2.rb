@@ -67,7 +67,7 @@ module HTTP2
     end
 
     def send_settings_frame
-      #payload = [4, 100, 7, 256*256].pack "NNNN"
+      payload = ""
       frame = make_frame(4, 0, 0, "")
       puts "send_settings_frame: #{frame.inspect}" if $debug
       @tls.write frame
@@ -191,7 +191,7 @@ module HTTP2
     end
 
     def inspect
-      "<HTTP2::%s len=%d flags=0x%02x stream-id=%d>" % [ self.class, @len, @flags, @stream_id ]
+      format "<HTTP2::%s len=%d flags=0x%02x stream-id=%d>", self.class, @len, @flags, @stream_id
     end
   end
 
@@ -273,7 +273,7 @@ module HTTP2
 end
 
 
-$debug =  false
+$debug = false
 if ARGV.size != 1
   puts "usage: mruby http2.rb <url>"
   exit
