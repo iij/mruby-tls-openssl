@@ -4,13 +4,13 @@ module HTTP2
   FRAME_TYPE_DATA     = 0
   FRAME_TYPE_HEADERS  = 1
   FRAME_TYPE_SETTINGS = 4
-  FRAME_TYPE_BLOCK = 11
+  FRAME_TYPE_BLOCK    = 11
 
   class Client
     FRAME_FLAG_SETTINGS_ACK = 0x1
 
     def initialize(host, port=443)
-      @tls = TLS.new host, port, { :alpn => "h2-12" }
+      @tls = TLS.new host, port, { :alpn => "h2-13" }
       @recvbuf = ""
       @my_next_stream_id = 1
       @window = 0
@@ -221,7 +221,7 @@ module HTTP2
         s = payload.dup
         h = {}
         while s.length > 0
-          t, v = s.unpack("CN")
+          t, v = s.unpack("nN")
           case t
           when 1
             h[:header_table_size] = v
@@ -236,7 +236,7 @@ module HTTP2
           else
             raise "unknown settings parameter: #{t} = #{v}"
           end
-          s = s[5..-1]
+          s = s[6..-1]
         end
         f = self.new len, type, flags, stream_id, payload
         f.settings = h
