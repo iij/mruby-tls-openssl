@@ -1,5 +1,8 @@
 # Required mrbgems: mruby-pack, mruby-regexp-pcre(or some regexp mrbgem)
 
+# TODO:
+# - connect via proxy
+
 module HTTP2
   FRAME_TYPE_DATA     = 0
   FRAME_TYPE_HEADERS  = 1
@@ -11,6 +14,9 @@ module HTTP2
 
     def initialize(host, port=443)
       @tls = TLS.new host, port, { :alpn => "h2-13" }
+      @tls = TLS.new host, port, {
+        :alpn => "h2-13", :certs => "nghttp2.crt"  #, :identity => host
+      }
       @recvbuf = ""
       @my_next_stream_id = 1
       @window = 0

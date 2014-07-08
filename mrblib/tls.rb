@@ -3,6 +3,7 @@ class TLS
     tls = self.new(hostname, port, opts)
     if block_given?
       yield tls
+      tls.close
     end
     tls
   end
@@ -15,9 +16,9 @@ class TLS
 
     @ctx = OpenSSL::SSL_CTX.new
     if opts[:certs]
-      #@ctx.load_verify_locations(certs)
-      #@ctx.set_verify
-      #@ctx.set_verify_depth
+      @ctx.load_verify_locations opts[:certs]
+      @ctx.set_verify
+      @ctx.set_verify_depth 5
     end
     if opts[:alpn]
       @ctx.set_alpn_protos opts[:alpn]
@@ -26,8 +27,12 @@ class TLS
     @ssl.set_fd(sock.fileno)
     @ssl.connect
 
-    # SSL_get_verify_result
-    # verify certs
+    if opts[:certs]
+      @ssl.get_verify_result
+      if opts[:identity]
+        @ssl.check_identity opts[:identity]
+      end
+    end
   end
 
   def close

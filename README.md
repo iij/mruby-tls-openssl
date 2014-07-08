@@ -10,12 +10,23 @@ Though very small number of APIs are implemented currently, you can write a [HTT
    - Supported keys in `opts`:
      - :alpn => str
        - send str as a protocol for ALPN
+     - :certs => str
+       - pathname of the file contains trustedroot CA certificate(s)
+     - :identity => str
+       - a server's identity expected
  - TLS#read(len=)
    - Read `len` bytes from TLS connection.
  - TLS#write(str)
    - Write str to TLS connection.
  - TLS#close
    - Close TLS connection
+
+## Example
+
+```Ruby
+# verify server's identity
+tls = TLS.new "github.com", 443, { :certs => "digicert.crt", :identity => "github.com" }
+```
 
 ## How to use TLS ALPN Extension
 
@@ -32,10 +43,6 @@ into `openssldir` directory:
 ```
 
 then build mruby.
-
-## Caveats
-This implementation is **INSECURE** now.
-For example, it does not verify server certificates at all.
 
 
 ## License
