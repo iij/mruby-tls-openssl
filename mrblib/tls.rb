@@ -1,6 +1,6 @@
 class TLS
-  def self.open(hostname, port=443, opts={})
-    tls = self.new(hostname, port, opts)
+  def self.open(hostname, opts={})
+    tls = self.new(hostname, opts)
     if block_given?
       yield tls
       tls.close
@@ -8,13 +8,14 @@ class TLS
     tls
   end
 
-  def initialize(sock, port=443, opts={})
+  def initialize(sock, opts={})
     if sock.is_a? String
+      port = opts[:port] || 443
       sock = TCPSocket.new(sock, port)
     end
     @sock = sock
 
-    @ctx = OpenSSL::SSL_CTX.new (opts[:version] || :any)
+    @ctx = OpenSSL::SSL_CTX.new (opts[:version] || "any")
     if opts[:certs]
       @ctx.load_verify_locations opts[:certs]
       @ctx.set_verify

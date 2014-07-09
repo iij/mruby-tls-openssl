@@ -5,8 +5,9 @@ Though very small number of APIs are implemented currently, you can write a [HTT
 
 ## API
 
- - TLS.new(host, port=443, opts={})
-   - Open a new TLS connection to host:port.
+ - TLS.new(host, opts={})
+   - Open a new TLS connection to `host`.  `host` can be either a hostname
+     (String) or a TCP socket (TCPSocket).
    - Supported keys in `opts`:
      - :alpn => str
        - send str as a protocol for ALPN
@@ -14,6 +15,8 @@ Though very small number of APIs are implemented currently, you can write a [HTT
        - pathname of the file contains trustedroot CA certificate(s)
      - :identity => str
        - a server's identity expected
+     - :port => Integer
+       - port number (unsed only when `host` is a string)
      - :version => str
        - TLS version: one of "TLSv1.0", "TLSv1.1", "TLSv1.2", or "any"
  - TLS#read(len=)
