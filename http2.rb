@@ -13,9 +13,10 @@ module HTTP2
     FRAME_FLAG_SETTINGS_ACK = 0x1
 
     def initialize(host, port=443)
-      @tls = TLS.new host, port, { :alpn => "h2-13" }
       @tls = TLS.new host, port, {
-        :alpn => "h2-13", :certs => "nghttp2.crt"  #, :identity => host
+        :version => "TLSv1.2",
+        :alpn => "h2-13",
+        :certs => "nghttp2.crt", :identity => "nghttp2"
       }
       @recvbuf = ""
       @my_next_stream_id = 1

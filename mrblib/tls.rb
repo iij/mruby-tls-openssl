@@ -14,7 +14,7 @@ class TLS
     end
     @sock = sock
 
-    @ctx = OpenSSL::SSL_CTX.new
+    @ctx = OpenSSL::SSL_CTX.new (opts[:version] || :any)
     if opts[:certs]
       @ctx.load_verify_locations opts[:certs]
       @ctx.set_verify

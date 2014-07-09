@@ -39,13 +39,40 @@ mrb_openssl_ssl_ctx_free(mrb_state *mrb, void *ptr)
   mrb_free(mrb, ptr);
 }
 
+static const SSL_METHOD *
+method_str_to_val(mrb_state *mrb, mrb_value str)
+{
+  const char *cp;
+  size_t len;
+
+  cp  = RSTRING_PTR(str);
+  len = RSTRING_LEN(str);
+  if (strncmp("TLSv1.0", cp, len) == 0) {
+    return TLSv1_client_method();
+  } else if (strncmp("TLSv1.1", cp, len) == 0) {
+    return TLSv1_1_client_method();
+  } else if (strncmp("TLSv1.2", cp, len) == 0) {
+    return TLSv1_2_client_method();
+  } else if (strncmp("any", cp, len) == 0) {
+    return SSLv23_client_method();
+  }
+
+  mrb_raisef(mrb, E_RUNTIME_ERROR, "TLS/SSL version %S is not supported", str);
+  return NULL;
+}
+
 static mrb_value
 mrb_openssl_ssl_ctx_init(mrb_state *mrb, mrb_value self)
 {
   struct mrb_openssl_ssl_ctx *mrb_ctx;
   SSL_CTX *ctx;
+  const SSL_METHOD *method;
+  mrb_value str;
 
-  ctx = SSL_CTX_new(TLSv1_client_method());
+  mrb_get_args(mrb, "S", &str);
+  method = method_str_to_val(mrb, str);
+
+  ctx = SSL_CTX_new(method);
   if (ctx == NULL) {
     mrb_raise(mrb, E_RUNTIME_ERROR, "SSL_CTX_new failed");
   }

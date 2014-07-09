@@ -14,6 +14,8 @@ Though very small number of APIs are implemented currently, you can write a [HTT
        - pathname of the file contains trustedroot CA certificate(s)
      - :identity => str
        - a server's identity expected
+     - :version => str
+       - TLS version: one of "TLSv1.0", "TLSv1.1", "TLSv1.2", or "any"
  - TLS#read(len=)
    - Read `len` bytes from TLS connection.
  - TLS#write(str)
