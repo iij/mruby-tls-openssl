@@ -16,7 +16,7 @@ Though very small number of APIs are implemented currently, you can write a [HTT
      - :identity => str
        - a server's identity expected
      - :port => Integer
-       - port number (unsed only when `host` is a string)
+       - port number (used only when `host` is a string)
      - :version => str
        - TLS version: one of "TLSv1.0", "TLSv1.1", "TLSv1.2", or "any"
  - TLS#read(len=)
