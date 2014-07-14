@@ -106,6 +106,7 @@ mrb_openssl_ssl_ctx_load_verify_locations(mrb_state *mrb, mrb_value self)
 static mrb_value
 mrb_openssl_ssl_ctx_set_alpn_protos(mrb_state *mrb, mrb_value self)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)
   struct mrb_openssl_ssl_ctx *mrb_ctx;
   mrb_value buf, str;
   mrb_int len;
@@ -122,6 +123,10 @@ mrb_openssl_ssl_ctx_set_alpn_protos(mrb_state *mrb, mrb_value self)
     mrb_raise(mrb, E_RUNTIME_ERROR, "SSL_CTX_set_alpn_protos() failed");
   }
   return self;
+#else
+  mrb_raise(mrb, E_NOTIMP_ERROR, "SSL_CTX_set_alpn_protos() is not available");
+  return self;
+#endif
 }
 
 static mrb_value

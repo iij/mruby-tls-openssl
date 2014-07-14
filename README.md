@@ -50,6 +50,21 @@ into `openssldir` directory:
 then build mruby.
 
 
+## Compile with LibreSSL
+
+To try [LibreSSL](http://www.libressl.org), install it to `openssldir`:
+
+```
+% cd mruby-tls-openssl
+% curl -O http://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-2.0.1.tar.gz
+% tar xzf libressl-2.0.1.tar.gz
+% cd libressl-2.0.1
+% ./configure --disable-shared --prefix=`pwd`/../openssldir
+% make
+% make install
+```
+
+
 ## License
 
 Copyright (c) 2014 Internet Initiative Japan Inc.
