@@ -7,16 +7,18 @@ module HTTP2
   FRAME_TYPE_DATA     = 0
   FRAME_TYPE_HEADERS  = 1
   FRAME_TYPE_SETTINGS = 4
+  FRAME_TYPE_GOAWAY   = 7
   FRAME_TYPE_BLOCK    = 11
 
   class Client
     FRAME_FLAG_SETTINGS_ACK = 0x1
 
     def initialize(host, port=443)
-      @tls = TLS.new host, port, {
+      @tls = TLS.new host, {
         :version => "TLSv1.2",
-        :alpn => "h2-13",
-        :certs => "nghttp2.crt", :identity => "nghttp2"
+        :port    => port,
+        :alpn    => "h2-14",
+        :certs   => "nghttp2.crt", :identity => "nghttp2"
       }
       @recvbuf = ""
       @my_next_stream_id = 1
@@ -54,7 +56,9 @@ module HTTP2
     end
 
     def make_frame(type, flags, stream, payload)
-      [payload.size, type, flags, stream].pack("nCCN") + payload
+      len = [payload.size/65536, payload.size/256, payload.size].map {
+        |x| x % 256 }.pack("C3")
+      len + [type, flags, stream].pack("CCN") + payload
     end
 
     def new_stream
@@ -66,6 +70,7 @@ module HTTP2
     end
 
     def send_frame f
+      puts "send_frame: #{f.inspect}" if $debug
       @tls.write f.to_bytes
     end
 
@@ -131,7 +136,7 @@ module HTTP2
           stream.recv_data_frame(frame)
           break if cond == :data_end and frame.end_stream?
         end
-        p frame if $debug
+        puts "wait_for receive: #{frame.inspect}" if $debug
       end
     end
   end
@@ -152,11 +157,13 @@ module HTTP2
 
     def recv_data_frame dframe
       @response_body += dframe.payload
-      @client.send_window_update(@id, dframe.len)
+      @client.send_window_update(@id, dframe.len) if dframe.len > 0
     end
   end
 
   class Frame
+    HEADERLEN = 9
+
     def initialize(len, type, flags, stream_id, payload)
       @len       = len
       @type      = type
@@ -168,10 +175,11 @@ module HTTP2
     attr_reader :len, :type, :flags, :stream_id, :payload
 
     def self.parse buf
-      return nil if buf.size < 8
-      len, type, flags, stream_id = buf.unpack("nCCN")
-      return nil if buf.size < 8 + len
-      payload = buf[8, len]
+      return nil if buf.size < HEADERLEN
+      len0, len1, len2, type, flags, stream_id = buf.unpack("C3CCN")
+      len = len0*65536 + len1*256 + len2
+      return nil if buf.size < HEADERLEN + len
+      payload = buf[HEADERLEN, len]
 
       args = [ len, type, flags, stream_id, payload ]
       case type
@@ -181,6 +189,8 @@ module HTTP2
         f = HeadersFrame.parse(*args)
       when HTTP2::FRAME_TYPE_SETTINGS
         f = SettingsFrame.parse(*args)
+      when HTTP2::FRAME_TYPE_GOAWAY
+        f = GoawayFrame.parse(*args)
       when HTTP2::FRAME_TYPE_BLOCK
         f = BlockFrame.parse(*args)
       else
@@ -190,15 +200,21 @@ module HTTP2
     end
 
     def bytelen
-      8 + @len
+      HEADERLEN + @len
     end
 
     def to_bytes
-      [ @len, @type, @flags, @stream_id ].pack("nCCN") + @payload
+      lens = [payload.size/65536, payload.size/256, payload.size].map {
+        |x| x % 256 }.pack("C3")
+      lens + [ @type, @flags, @stream_id ].pack("CCN") + @payload
     end
 
     def inspect
-      format "<HTTP2::%s len=%d flags=0x%02x stream-id=%d>", self.class, @len, @flags, @stream_id
+      format "<%s len=%d flags=0x%02x stream-id=%d%s>", self.class, @len, @flags, @stream_id, inspect_payload
+    end
+
+    def inspect_payload
+      ""
     end
   end
 
@@ -262,13 +278,35 @@ module HTTP2
   end
 
   class WindowUpdateFrame < Frame
+    attr_accessor :inc
+
     def self.parse(len, type, flags, stream_id, payload)
       f = self.new(len, type, flags, stream_id, payload)
     end
 
     def self.make_update(stream_id, inc)
       payload = [ inc ].pack("N")
-      self.new(payload.size, 8, 0, stream_id, payload)
+      f = self.new(payload.size, 8, 0, stream_id, payload)
+      f.inc = inc
+      f
+    end
+
+    def inspect_payload
+      " inc=#{@inc}"
+    end
+  end
+
+  class GoawayFrame < Frame
+    attr_accessor :laststream, :ecode, :debugdata
+
+    def self.parse(len, type, flags, stream_id, payload)
+      f = self.new(len, type, flags, stream_id, payload)
+      f.laststream, f.ecode, f.debugdata = payload.unpack("NNa*")
+      f
+    end
+
+    def inspect_payload
+      " last_stream_id=#{@laststream} error_code=#{@ecode} additional_debug_data=\"#{@debugdata}\""
     end
   end
 
@@ -280,7 +318,7 @@ module HTTP2
 end
 
 
-$debug = false
+$debug = true
 if ARGV.size != 1
   puts "usage: mruby http2.rb <url>"
   exit
