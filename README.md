@@ -12,7 +12,7 @@ Though very small number of APIs are implemented currently, you can write a [HTT
      - :alpn => str
        - send str as a protocol for ALPN
      - :certs => str
-       - pathname of the file contains trustedroot CA certificate(s)
+       - pathname of the file contains trusted root CA certificate(s)
      - :identity => str
        - a server's identity expected
      - :port => Integer
@@ -30,7 +30,10 @@ Though very small number of APIs are implemented currently, you can write a [HTT
 
 ```Ruby
 # verify server's identity
-tls = TLS.new "github.com", 443, { :certs => "digicert.crt", :identity => "github.com" }
+tls = TLS.new "github.com", { :port => 443, :certs => "digicert.crt", :identity => "github.com" }
+tls.write "GET / HTTP/1.1\r\nHost: github.com\r\nConnection: close\r\n\r\n"
+p tls.read
+tls.close
 ```
 
 ## How to use TLS ALPN Extension
