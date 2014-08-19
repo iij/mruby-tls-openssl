@@ -1,6 +1,6 @@
 MRuby::Gem::Specification.new('mruby-tls-openssl') do |spec|
   spec.license = 'MIT'
-  spec.author  = 'Internet Initiative Japan'
+  spec.author  = 'Internet Initiative Japan Inc.'
 
   spec.add_dependency 'mruby-io'
   spec.add_dependency 'mruby-socket'
