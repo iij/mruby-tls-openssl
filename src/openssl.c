@@ -333,8 +333,12 @@ mrb_openssl_ssl_connect(mrb_state *mrb, mrb_value self)
   mrb_ssl = mrb_data_get_ptr(mrb, self, &mrb_openssl_ssl_type);
   ret = SSL_connect(mrb_ssl->ssl);
   if (ret != 1) {
-    mrb_value reason = mrb_str_new_cstr(mrb, ERR_reason_error_string(ERR_peek_last_error()));
-    mrb_raisef(mrb, E_RUNTIME_ERROR, "SSL_connect() failed: %S", reason);
+    mrb_value reason;
+    unsigned long e, ecode = 0;
+    while ((e = ERR_get_error()) != 0) {
+      ecode = e;
+    }
+    mrb_raisef(mrb, E_RUNTIME_ERROR, "SSL_connect() failed: %S", mrb_str_new_cstr(mrb, ERR_reason_error_string(ecode)));
   }
   return self;
 }
