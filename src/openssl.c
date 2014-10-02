@@ -353,11 +353,21 @@ mrb_openssl_ssl_connect(mrb_state *mrb, mrb_value self)
   mrb_ssl = mrb_data_get_ptr(mrb, self, &mrb_openssl_ssl_type);
   ret = SSL_connect(mrb_ssl->ssl);
   if (ret != 1) {
+    mrb_value reason;
     unsigned long e, ecode = 0;
+    long result;
     while ((e = ERR_get_error()) != 0) {
       ecode = e;
     }
-    mrb_raisef(mrb, E_RUNTIME_ERROR, "SSL_connect() failed: %S", mrb_str_new_cstr(mrb, ERR_reason_error_string(ecode)));
+    reason = mrb_str_new_cstr(mrb, ERR_reason_error_string(ecode));
+
+    result = SSL_get_verify_result(mrb_ssl->ssl);
+    if (result != X509_V_OK) {
+      mrb_str_cat_lit(mrb, reason, ": ");
+      mrb_str_cat_cstr(mrb, reason, X509_verify_cert_error_string(result));
+    }
+
+    mrb_raisef(mrb, E_RUNTIME_ERROR, "SSL_connect() failed: %S", reason);
   }
   return self;
 }
