@@ -15,6 +15,8 @@ Though very small number of APIs are implemented currently, you can write a [HTT
        - pathname of the file contains trusted root CA certificate(s)
      - :identity => str
        - a server's identity expected
+     - :ignore_certificate_validity => boolean
+       - ignore "Not Before" and "Not After" fields of certificates
      - :port => Integer
        - port number (used only when `host` is a string)
      - :version => str

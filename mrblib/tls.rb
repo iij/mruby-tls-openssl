@@ -18,7 +18,7 @@ class TLS
     @ctx = OpenSSL::SSL_CTX.new (opts[:version] || "any")
     if opts[:certs]
       @ctx.load_verify_locations opts[:certs]
-      @ctx.set_verify
+      @ctx.set_verify opts[:ignore_certificate_validity]
       @ctx.set_verify_depth 5
     end
     if opts[:alpn]

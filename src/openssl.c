@@ -13,7 +13,9 @@
 #include <openssl/opensslv.h>
 #include <openssl/rand.h>
 #include <openssl/ssl.h>
+#include <openssl/x509.h>
 #include <openssl/x509v3.h>
+#include <openssl/x509_vfy.h>
 
 #include "mruby.h"
 #include "mruby/class.h"
@@ -141,13 +143,31 @@ mrb_openssl_ssl_ctx_set_verify_depth(mrb_state *mrb, mrb_value self)
   return self;
 }
 
+static int
+ssl_ctx_verify_callback_ignorevalidity(int ok, X509_STORE_CTX *ctx)
+{
+  if (ok == 0) {
+    int ecode = X509_STORE_CTX_get_error(ctx);
+    if (ecode == X509_V_ERR_CERT_NOT_YET_VALID || ecode == X509_V_ERR_CERT_HAS_EXPIRED) {
+      X509_STORE_CTX_set_error(ctx, X509_V_OK);
+      return 1;
+    }
+  }
+  return ok;
+}
+
 static mrb_value
 mrb_openssl_ssl_ctx_set_verify(mrb_state *mrb, mrb_value self)
 {
   struct mrb_openssl_ssl_ctx *mrb_ctx;
-
+  mrb_value b = mrb_nil_value();
+  mrb_get_args(mrb, "|o", &b);
   mrb_ctx = mrb_data_get_ptr(mrb, self, &mrb_openssl_ssl_ctx_type);
-  SSL_CTX_set_verify(mrb_ctx->ctx, SSL_VERIFY_PEER, NULL);
+  if (mrb_bool(b)) { // :ignore_certificate_validity
+    SSL_CTX_set_verify(mrb_ctx->ctx, SSL_VERIFY_PEER, ssl_ctx_verify_callback_ignorevalidity);
+  } else {
+    SSL_CTX_set_verify(mrb_ctx->ctx, SSL_VERIFY_PEER, NULL);
+  }
   return self;
 }
 
@@ -333,7 +353,6 @@ mrb_openssl_ssl_connect(mrb_state *mrb, mrb_value self)
   mrb_ssl = mrb_data_get_ptr(mrb, self, &mrb_openssl_ssl_type);
   ret = SSL_connect(mrb_ssl->ssl);
   if (ret != 1) {
-    mrb_value reason;
     unsigned long e, ecode = 0;
     while ((e = ERR_get_error()) != 0) {
       ecode = e;
