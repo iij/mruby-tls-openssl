@@ -363,7 +363,7 @@ mrb_openssl_ssl_connect(mrb_state *mrb, mrb_value self)
 
     result = SSL_get_verify_result(mrb_ssl->ssl);
     if (result != X509_V_OK) {
-      mrb_str_cat_lit(mrb, reason, ": ");
+      mrb_str_cat_cstr(mrb, reason, ": ");
       mrb_str_cat_cstr(mrb, reason, X509_verify_cert_error_string(result));
     }
 
