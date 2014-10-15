@@ -49,7 +49,7 @@ into `openssldir` directory:
 % cd openssl-1.0.2-beta1
 % ./config --openssldir=`pwd`/../openssldir no-shared no-threads
 % make
-% make install_sw
+% make install
 ```
 
 then build mruby.
@@ -61,9 +61,9 @@ To try [LibreSSL](http://www.libressl.org), install it to `openssldir`:
 
 ```
 % cd mruby-tls-openssl
-% curl -O http://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-2.0.1.tar.gz
-% tar xzf libressl-2.0.1.tar.gz
-% cd libressl-2.0.1
+% curl -O http://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-2.1.0.tar.gz
+% tar xzf libressl-2.1.0.tar.gz
+% cd libressl-2.1.0
 % ./configure --disable-shared --prefix=`pwd`/../openssldir
 % make
 % make install
