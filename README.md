@@ -61,9 +61,9 @@ To try [LibreSSL](http://www.libressl.org), install it to `openssldir`:
 
 ```
 % cd mruby-tls-openssl
-% curl -O http://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-2.1.0.tar.gz
-% tar xzf libressl-2.1.0.tar.gz
-% cd libressl-2.1.0
+% curl -O http://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-2.1.1.tar.gz
+% tar xzf libressl-2.1.1.tar.gz
+% cd libressl-2.1.1
 % ./configure --disable-shared --prefix=`pwd`/../openssldir
 % make
 % make install
