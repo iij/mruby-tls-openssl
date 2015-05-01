@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -192,23 +193,51 @@ mrb_openssl_ssl_free(mrb_state *mrb, void *ptr)
   mrb_free(mrb, ptr);
 }
 
-static int
-wildcard_name_match(const char *pat, int patlen, const char *name)
+int
+mrb_openssl_match_dns_id(const char *ref_id, const char *pr_id)
 {
-  const char *cp;
+  const char *dotp, *pr_domain, *ref_domain;
 
-  // "pat" must begin with "*.".
-  if (patlen < 2 || pat[0] != '*' || pat[1] != '.') {
+  if (strchr(pr_id, '*') == NULL) {
+    /* no wildcard characters - it's easy */
+    return strcasecmp(ref_id, pr_id) == 0;
+  }
+
+  /* Note: we don't support partial matching like "f*.com". */
+
+  if (pr_id[0] != '*' || pr_id[1] != '.') {
+    /* reject any wildcard identifier DOES NOT start with "*." */
     return 0;
   }
 
-  // skip first label, or return false.
-  cp = strchr(name, '.');
-  if (cp == NULL) {
+  /* where pr_id = "*.example.com", pr_domain points to "example.com" */
+  pr_domain = pr_id + 2;
+
+  if (strchr(pr_domain, '*') != NULL) {
+    /* reject multiple wildcard characters (e.g. "*.*.com", "*.example.*") */
     return 0;
   }
 
-  return strcasecmp(pat + 2, cp + 1) == 0;
+  /* where pr_domain = "example.com", dotp points to ".com" */
+  dotp = strchr(pr_domain, '.');
+  if (dotp == NULL) {
+    /* reject "*.tld" and "*." */
+    return 0;
+  }
+
+  if (! isalnum(dotp[1])) {
+    /* reject invalid domain name (e.g. "*.com.", "*.net..", "*.foo.-org") */
+    return 0;
+  }
+
+  ref_domain = strchr(ref_id, '.');
+  if (ref_domain == NULL) {
+    /* if ref_id has no dot, it never matches */
+    return 0;
+  }
+  ref_domain++;
+
+  return strcasecmp(pr_domain, ref_domain) == 0;
 }
 
 static mrb_value
@@ -220,9 +249,8 @@ mrb_openssl_ssl_check_identity(mrb_state *mrb, mrb_value self)
   STACK_OF(GENERAL_NAME) *altnames;
   X509 *cert;
   X509_NAME *subj;
-  int addrlen, i, j, k, n, ok;
-  char *utf8str;
-  char addrbuf[16], addrbuf2[16];
+  int addrlen, cplen, i, j, n, ok;
+  char addrbuf[16];
   const char *cp, *idstr;
   mrb_value id;
 
@@ -250,25 +278,24 @@ mrb_openssl_ssl_check_identity(mrb_state *mrb, mrb_value self)
     n = sk_GENERAL_NAME_num(altnames);
     for (i = 0; i < n; i++) {
       name = sk_GENERAL_NAME_value(altnames, i);
-      if (name == NULL)
-        continue;
-      cp = (const char *)ASN1_STRING_data(name->d.ia5);
-      k = ASN1_STRING_length(name->d.ia5);
       if (addrlen == -1 && name->type == GEN_DNS) {
         ok = 0;
-        if (strlen(cp) != k)
-          continue;
-        if (wildcard_name_match(cp, k, idstr)) {
-          ok = 1;
+        cp = (const char *)ASN1_STRING_data(name->d.ia5);
+        cplen = ASN1_STRING_length(name->d.ia5);
+        if (strlen(cp) != cplen) {
+          /* contains NUL character! it should be a malicious certificate. */
+          ok = 0;
           break;
         }
-        if (strcasecmp(cp, idstr) == 0) {
+        if (mrb_openssl_match_dns_id(idstr, cp)) {
           ok = 1;
           break;
         }
       } else if (addrlen != -1 && name->type == GEN_IPADD) {
         ok = 0;
-        if (k == addrlen && memcmp(cp, addrbuf, k) == 0) {
+        cp = (const char *)ASN1_STRING_data(name->d.iPAddress);
+        cplen = ASN1_STRING_length(name->d.iPAddress);
+        if (cplen == addrlen && memcmp(cp, addrbuf, cplen) == 0) {
           ok = 1;
           break;
         }
@@ -288,6 +315,11 @@ mrb_openssl_ssl_check_identity(mrb_state *mrb, mrb_value self)
         mrb_raisef(mrb, E_RUNTIME_ERROR, "iPAddress of server certificate does not match \"%S\"", id);
       }
     }
+  }
+
+  if (addrlen != -1) {
+    X509_free(cert);
+    mrb_raise(mrb, E_RUNTIME_ERROR, "identity is an IP address but server certificate does not have iPAddress");
   }
 
   subj = X509_get_subject_name(cert);
@@ -311,35 +343,20 @@ mrb_openssl_ssl_check_identity(mrb_state *mrb, mrb_value self)
      X509_free(cert);
      mrb_raise(mrb, E_RUNTIME_ERROR, "X509_NAME_ENTRY_get_data failed");
    }
-   n = ASN1_STRING_to_UTF8((unsigned char **)&utf8str, as);
-   if (utf8str == NULL) {
-     X509_free(cert);
-     mrb_raise(mrb, E_RUNTIME_ERROR, "ASN1_STRING_to_UTF8 failed");
-   }
-   if (strlen(utf8str) != n) {
-     OPENSSL_free(utf8str);
+   cp = (const char *)ASN1_STRING_data(as);
+   cplen = ASN1_STRING_length(as);
+   if (strlen(cp) != cplen) {
      X509_free(cert);
      mrb_raise(mrb, E_RUNTIME_ERROR, "CN includes NUL char!");
    }
 
-   if (addrlen == 4) {
-     ok = (inet_pton(AF_INET, utf8str, addrbuf2) == 1 &&
-           memcmp(addrbuf, addrbuf2, addrlen) == 0);
-   } else if (addrlen == 16) {
-     ok = (inet_pton(AF_INET6, utf8str, addrbuf2) == 1 &&
-           memcmp(addrbuf, addrbuf2, addrlen) == 0);
-   } else {
-     ok = (strcasecmp(utf8str, idstr) == 0);
-   }
-   if (! ok) {
+   if (! mrb_openssl_match_dns_id(idstr, cp)) {
      char buf[128];
-     snprintf(buf, sizeof(buf), "CN differs from Host: CN=%s, Host=%s", utf8str, idstr);
-     OPENSSL_free(utf8str);
+     snprintf(buf, sizeof(buf), "CN differs from Host: CN=%s, Host=%s", cp, idstr);
      X509_free(cert);
      mrb_raise(mrb, E_RUNTIME_ERROR, buf);
    }
 
-   OPENSSL_free(utf8str);
    X509_free(cert);
    return mrb_true_value();
 }
