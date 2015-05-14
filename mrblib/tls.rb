@@ -8,12 +8,13 @@ class TLS
     tls
   end
 
-  def initialize(sock, opts={})
-    if sock.is_a? String
-      port = opts[:port] || 443
-      sock = TCPSocket.new(sock, port)
+  def initialize(host, opts={})
+    if host.is_a? String
+      @sock = TCPSocket.new(host, opts[:port] || 443)
+    else
+      @sock = host
+      host = nil
     end
-    @sock = sock
 
     @ctx = OpenSSL::SSL_CTX.new (opts[:version] || "any")
     if opts[:certs]
@@ -25,7 +26,19 @@ class TLS
       @ctx.set_alpn_protos opts[:alpn]
     end
     @ssl = OpenSSL::SSL.new(@ctx)
-    @ssl.set_fd(sock.fileno)
+    @ssl.set_fd(@sock.fileno)
+    if opts[:sni]
+      if opts[:sni].is_a? String
+        servername = opts[:sni]
+      else
+        servername = opts[:identity] || host
+      end
+      unless servername
+        raise RuntimeError, 'requested SNI but identity is not known'
+      end
+      @ssl.set_tlsext_host_name(servername)
+    end
+
     @ssl.connect
 
     if opts[:certs]

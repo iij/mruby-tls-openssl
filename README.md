@@ -19,6 +19,11 @@ Though very small number of APIs are implemented currently, you can write a [HTT
        - ignore "Not Before" and "Not After" fields of certificates
      - :port => Integer
        - port number (used only when `host` is a string)
+     - :sni => false (default) | true | String
+       - use Server Name Indication (SNI)
+         - false  : don't send SNI extention
+         - true   : send `opts[:identity]` or `host` as a server name
+         - String : send it as a server name
      - :version => str
        - TLS version: one of "TLSv1.0", "TLSv1.1", "TLSv1.2", or "any"
  - TLS#read(len=)

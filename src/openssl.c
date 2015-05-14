@@ -418,6 +418,22 @@ mrb_openssl_ssl_set_fd(mrb_state *mrb, mrb_value self)
 }
 
 static mrb_value
+mrb_openssl_ssl_set_tlsext_host_name(mrb_state *mrb, mrb_value self)
+{
+  struct mrb_openssl_ssl *mrb_ssl;
+  mrb_value str;
+  char *cp;
+
+  mrb_ssl = mrb_data_get_ptr(mrb, self, &mrb_openssl_ssl_type);
+  mrb_get_args(mrb, "S", &str);
+  cp = mrb_str_to_cstr(mrb, str);
+  if (SSL_set_tlsext_host_name(mrb_ssl->ssl, cp) == 0) {
+    mrb_raisef(mrb, E_RUNTIME_ERROR, "SSL_set_tlsext_host_name(\"%S\") failed", str);
+  }
+  return self;
+}
+
+static mrb_value
 mrb_openssl_ssl_read(mrb_state *mrb, mrb_value self)
 {
   struct mrb_openssl_ssl *mrb_ssl;
@@ -516,6 +532,7 @@ mrb_mruby_tls_openssl_gem_init(mrb_state *mrb)
   mrb_define_method(mrb, c_ssl, "get_verify_result", mrb_openssl_ssl_get_verify_result, MRB_ARGS_NONE());
   mrb_define_method(mrb, c_ssl, "read", mrb_openssl_ssl_read, MRB_ARGS_OPT(2));
   mrb_define_method(mrb, c_ssl, "set_fd", mrb_openssl_ssl_set_fd, MRB_ARGS_REQ(1));
+  mrb_define_method(mrb, c_ssl, "set_tlsext_host_name", mrb_openssl_ssl_set_tlsext_host_name, MRB_ARGS_REQ(1));
   mrb_define_method(mrb, c_ssl, "shutdown", mrb_openssl_ssl_shutdown, MRB_ARGS_NONE());
   mrb_define_method(mrb, c_ssl, "write", mrb_openssl_ssl_write, MRB_ARGS_REQ(1));
 
