@@ -46,12 +46,12 @@ tls.close
 ## How to use TLS ALPN Extension
 
 If you want to use TLS ALPN Extension, build and install OpenSSL 1.0.2
-into `openssldir` directory:
+(or later) into `openssldir` directory:
 
 ```
 % cd mruby-tls-openssl
-% curl https://www.openssl.org/source/openssl-1.0.2-beta1.tar.gz | tar xzf -
-% cd openssl-1.0.2-beta1
+% curl https://www.openssl.org/source/openssl-1.0.2a.tar.gz | tar xzf -
+% cd openssl-1.0.2a
 % ./config --openssldir=`pwd`/../openssldir no-shared no-threads
 % make
 % make install
