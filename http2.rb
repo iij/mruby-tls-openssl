@@ -17,7 +17,7 @@ module HTTP2
       @tls = TLS.new host, {
         :version => "TLSv1.2",
         :port    => port,
-        :alpn    => "h2-14",
+        :alpn    => "h2",
         :certs   => "nghttp2.crt", :identity => "nghttp2"
       }
       @recvbuf = ""
