@@ -1,9 +1,12 @@
 #include <sys/types.h>
+#ifndef _WIN32
 #include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/wait.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#else
+#include <win32netcompat.h>
+#endif
+#include <sys/time.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
